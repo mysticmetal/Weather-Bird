@@ -20,6 +20,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.RadioGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import org.json.JSONArray;
@@ -46,7 +48,8 @@ public class ForecastFragment extends Fragment {
     public WeatherDetail[] wdet;
     WeatherAdapter mForecastAdapter;
     public ListView listView;
-
+    public String metrics="metric";
+    public View rootView;
     public ForecastFragment() {
     }
 
@@ -95,9 +98,38 @@ public class ForecastFragment extends Fragment {
             alertDialog.show();
             return true;
         }
+        if(id== R.id.action_units)
+        {
+            AlertDialog.Builder builder=new AlertDialog.Builder(getActivity());
 
+            LayoutInflater inflater=getActivity().getLayoutInflater();
+            View view=inflater.inflate(R.layout.dialog_unit,null);
+
+            builder.setTitle("Select Unit").setView(view).setPositiveButton("Done!", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                   FetchWeatherTask datain=new FetchWeatherTask();
+                    datain.execute();
+                }
+            });
+            builder.create().show();
+            RadioGroup rg=(RadioGroup) view.findViewById(R.id.radiogrp);
+            rg.check(R.id.celsius);
+            rg.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(RadioGroup group, int checkedId) {
+                    if(checkedId==R.id.celsius)
+                    {
+                        metrics="metric";
+                    }
+                    else metrics="imperial";
+                }
+            });
+            return true;
+        }
         return super.onOptionsItemSelected(item);
     }
+
 
     @Override
     public String toString() {
@@ -107,7 +139,7 @@ public class ForecastFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View rootView = inflater.inflate(R.layout.fragment_main, container, false);
+         rootView = inflater.inflate(R.layout.fragment_main, container, false);
         locpin="pauri";
         FetchWeatherTask getw=new FetchWeatherTask();
         getw.execute();
@@ -207,7 +239,7 @@ public class ForecastFragment extends Fragment {
         }
 
 
-        final String your_key_here="";
+        final String your_key_here="a1ce2deccc132a31816394a3b965e031";
 
         protected Void doInBackground(Void... params)
      {
@@ -217,7 +249,6 @@ public class ForecastFragment extends Fragment {
          HttpURLConnection urlConnection=null;
          BufferedReader reader=null;
          String format="json";
-         String units="metric";
          int numDays=7;
 
          String forecastJsonStr=null;
@@ -229,7 +260,7 @@ public class ForecastFragment extends Fragment {
              final String UNITS_PARAM="units";
              final String DAYS_PARAM="cnt";
 
-             Uri builtUri=Uri.parse(FORECAST_BASE_URL).buildUpon().appendQueryParameter(QUERY_PARAM,locpin).appendQueryParameter(FORMAT_PARAM,format).appendQueryParameter(UNITS_PARAM,units).appendQueryParameter(DAYS_PARAM,numDays+"").appendQueryParameter("APPID",
+             Uri builtUri=Uri.parse(FORECAST_BASE_URL).buildUpon().appendQueryParameter(QUERY_PARAM,locpin).appendQueryParameter(FORMAT_PARAM,format).appendQueryParameter(UNITS_PARAM,metrics).appendQueryParameter(DAYS_PARAM,numDays+"").appendQueryParameter("APPID",
                      your_key_here).build();
 
              URL url=new URL(builtUri.toString());
@@ -290,6 +321,8 @@ public class ForecastFragment extends Fragment {
         @Override
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
+            TextView tv=(TextView) rootView.findViewById(R.id.Current_Location);
+            tv.setText("Weather of "+locpin);
             List<WeatherDetail> weekForecast=new ArrayList<>(Arrays.asList(wdet));
             if(weekForecast==null || weekForecast.size()==0) {
                 Toast.makeText(getActivity(), "Location is not valid, betey!!", Toast.LENGTH_SHORT).show();
