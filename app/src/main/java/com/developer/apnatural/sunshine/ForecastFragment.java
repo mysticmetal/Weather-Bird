@@ -48,15 +48,41 @@ public class ForecastFragment extends Fragment {
     public WeatherDetail[] wdet;
     WeatherAdapter mForecastAdapter;
     public ListView listView;
-    public String metrics="metric";
+    public String metrics;
     public View rootView;
+    public String locDisp;
+    public String ccode;
+    public String language;
     public ForecastFragment() {
     }
 
+
+
     public void onCreate(Bundle savedinstancestate) {
         super.onCreate(savedinstancestate);
-
+       if(savedinstancestate!=null)
+       {
+         language=savedinstancestate.getString("Language");
+           metrics=savedinstancestate.getString("Metric");
+           locpin=savedinstancestate.getString("LocationToSearch");
+       }
+        else
+       {
+           locpin="Pauri";
+                   metrics="metric";
+           language="en";
+       }
         setHasOptionsMenu(true);
+    }
+
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+
+        outState.putString("Language",language);
+        outState.putString("Metric",metrics);
+        outState.putString("LocationToSearch",locpin);
+        super.onSaveInstanceState(outState);
     }
 
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
@@ -98,6 +124,37 @@ public class ForecastFragment extends Fragment {
             alertDialog.show();
             return true;
         }
+
+        if(id==R.id.action_langsupp)
+        {
+            AlertDialog.Builder builder=new AlertDialog.Builder(getActivity());
+
+final String[] languager={"English","Russian","Italian","French","German","Spanish","Chinese Traditional"};
+           builder.setTitle("Language").setItems(R.array.languages,new DialogInterface.OnClickListener() {
+               @Override
+               public void onClick(DialogInterface dialog, int which) {
+                   String c=languager[which];
+                   if(c=="English")
+                       language="en";
+                   if(c=="Russian")
+                       language="ru";
+                   if(c=="Italian")
+                       language="it";
+                   if(c=="French")
+                       language="fr";
+                   if(c=="German")
+                       language="de";
+                   if(c=="Spanish")
+                       language="es";
+                   if(c=="Chinese Traditional")
+                       language="zh_tw";
+
+                   FetchWeatherTask datain=new FetchWeatherTask();
+                   datain.execute();
+               }
+           }).create().show();
+
+        }
         if(id== R.id.action_units)
         {
             AlertDialog.Builder builder=new AlertDialog.Builder(getActivity());
@@ -114,7 +171,6 @@ public class ForecastFragment extends Fragment {
             });
             builder.create().show();
             RadioGroup rg=(RadioGroup) view.findViewById(R.id.radiogrp);
-            rg.check(R.id.celsius);
             rg.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
                 @Override
                 public void onCheckedChanged(RadioGroup group, int checkedId) {
@@ -140,7 +196,7 @@ public class ForecastFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
          rootView = inflater.inflate(R.layout.fragment_main, container, false);
-        locpin="pauri";
+     
         FetchWeatherTask getw=new FetchWeatherTask();
         getw.execute();
         listView=(ListView) rootView.findViewById(R.id.listview_forecast);
@@ -179,7 +235,8 @@ public class ForecastFragment extends Fragment {
             final String OWM_TEMPERATURE = "temp";
             final String OWM_MAX = "max";
             final String OWM_MIN = "min";
-            final String OWM_DESCRIPTION = "main";
+            final String OWM_DESCRIPTION = "description";
+
             final String OWM_ICON="icon";
 
             JSONObject forecastJson = new JSONObject(forecastJsonStr);
@@ -188,7 +245,9 @@ public class ForecastFragment extends Fragment {
             // OWM returns daily forecasts based upon the local time of the city that is being
             // asked for, which means that we need to know the GMT offset to translate this data
             // properly.
-
+                JSONObject cdet=forecastJson.getJSONObject("city");
+            locDisp=cdet.getString("name");
+            ccode=cdet.getString("country");
             // Since this data is also sent in-order and the first day is always the
             // current day, we're going to take advantage of that to get a nice
             // normalized UTC date for all of our weather.
@@ -260,7 +319,7 @@ public class ForecastFragment extends Fragment {
              final String UNITS_PARAM="units";
              final String DAYS_PARAM="cnt";
 
-             Uri builtUri=Uri.parse(FORECAST_BASE_URL).buildUpon().appendQueryParameter(QUERY_PARAM,locpin).appendQueryParameter(FORMAT_PARAM,format).appendQueryParameter(UNITS_PARAM,metrics).appendQueryParameter(DAYS_PARAM,numDays+"").appendQueryParameter("APPID",
+             Uri builtUri=Uri.parse(FORECAST_BASE_URL).buildUpon().appendQueryParameter(QUERY_PARAM,locpin).appendQueryParameter("lang",language).appendQueryParameter(FORMAT_PARAM,format).appendQueryParameter(UNITS_PARAM,metrics).appendQueryParameter(DAYS_PARAM,numDays+"").appendQueryParameter("APPID",
                      your_key_here).build();
 
              URL url=new URL(builtUri.toString());
@@ -322,10 +381,10 @@ public class ForecastFragment extends Fragment {
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
             TextView tv=(TextView) rootView.findViewById(R.id.Current_Location);
-            tv.setText("Weather of "+locpin);
+            tv.setText("Weather of "+locDisp+","+ccode);
             List<WeatherDetail> weekForecast=new ArrayList<>(Arrays.asList(wdet));
             if(weekForecast==null || weekForecast.size()==0) {
-                Toast.makeText(getActivity(), "Location is not valid, betey!!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getActivity(), "Location is not valid!", Toast.LENGTH_SHORT).show();
             }
             else {
                 mForecastAdapter = new WeatherAdapter(getActivity(), weekForecast);
